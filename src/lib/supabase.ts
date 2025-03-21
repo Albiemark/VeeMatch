@@ -93,9 +93,8 @@ export async function uploadPhoto(file: File, profileId: string) {
   if (!profile) throw new Error('Profile not found');
 
   const fileExt = file.name.split('.').pop();
-  // Extract the actual user ID without the "user_" prefix for the folder name
-  const userId = profile.user_id.replace('user_', '');
-  const fileName = `${userId}/${Math.random()}.${fileExt}`;
+  // Use the full Clerk user ID for the folder name
+  const fileName = `${profile.user_id}/${Math.random()}.${fileExt}`;
 
   // Upload the file
   const { error: uploadError } = await supabase.storage

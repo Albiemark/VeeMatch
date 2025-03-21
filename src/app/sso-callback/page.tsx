@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useClerk } from '@clerk/nextjs';
 import { Loader } from 'lucide-react';
 
-export default function SSOCallback() {
+function SSOCallbackContent() {
   const router = useRouter();
   const { handleRedirectCallback } = useClerk();
   const searchParams = useSearchParams();
@@ -34,11 +34,24 @@ export default function SSOCallback() {
   }, [handleRedirectCallback, router, searchParams]);
 
   return (
+    <div className="text-center">
+      <Loader className="w-12 h-12 text-pink-500 animate-spin mx-auto mb-4" />
+      <p className="text-gray-600">Completing sign in...</p>
+    </div>
+  );
+}
+
+export default function SSOCallback() {
+  return (
     <div className="flex justify-center items-center min-h-screen bg-gradient-to-b from-pink-100 to-white">
-      <div className="text-center">
-        <Loader className="w-12 h-12 text-pink-500 animate-spin mx-auto mb-4" />
-        <p className="text-gray-600">Completing sign in...</p>
-      </div>
+      <Suspense fallback={
+        <div className="text-center">
+          <Loader className="w-12 h-12 text-pink-500 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      }>
+        <SSOCallbackContent />
+      </Suspense>
     </div>
   );
 }

@@ -69,6 +69,18 @@ export default function CreateProfilePage() {
 
     try {
       if (currentStep === 3) {
+        // Validate required fields
+        if (!formData.displayName || !formData.age || !formData.gender || 
+            !formData.locationCity || !formData.locationCountry || !formData.relationshipGoals) {
+          toast.error('Please fill in all required fields');
+          return;
+        }
+
+        // Make sure enum values are valid
+        const childrenValue = formData.children ? 
+          (formData.children as 'have' | 'want' | 'don\'t want' | 'open to it') : 
+          'open to it'; // Default value if empty
+
         // Create profile before showing photo upload step
         const profile = await createProfile({
           user_id: user.id,
@@ -81,9 +93,9 @@ export default function CreateProfilePage() {
           location_city: formData.locationCity,
           location_country: formData.locationCountry,
           relationship_goals: formData.relationshipGoals as 'long-term' | 'casual-dating' | 'friendship' | 'not-sure-yet',
-          drinking: formData.drinking as 'never' | 'rarely' | 'socially' | 'regularly',
-          smoking: formData.smoking as 'never' | 'socially' | 'regularly',
-          children: formData.children as 'have' | 'want' | 'don\'t want' | 'open to it',
+          drinking: formData.drinking || 'never', // Default if empty
+          smoking: formData.smoking || 'never', // Default if empty
+          children: childrenValue,
         });
 
         // Set the profile ID
@@ -253,9 +265,8 @@ export default function CreateProfilePage() {
                 value={formData.drinking}
                 onChange={handleInputChange}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
-                required
               >
-                <option value="">Select drinking preference</option>
+                <option value="">Select option</option>
                 <option value="never">Never</option>
                 <option value="rarely">Rarely</option>
                 <option value="socially">Socially</option>
@@ -269,9 +280,8 @@ export default function CreateProfilePage() {
                 value={formData.smoking}
                 onChange={handleInputChange}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
-                required
               >
-                <option value="">Select smoking preference</option>
+                <option value="">Select option</option>
                 <option value="never">Never</option>
                 <option value="socially">Socially</option>
                 <option value="regularly">Regularly</option>
@@ -284,23 +294,17 @@ export default function CreateProfilePage() {
                 value={formData.children}
                 onChange={handleInputChange}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
-                required
               >
-                <option value="">Select children preference</option>
+                <option value="">Select option</option>
                 <option value="have">Have children</option>
                 <option value="want">Want children</option>
                 <option value="don't want">Don't want children</option>
-                <option value="open to it">Open to it</option>
+                <option value="open to it">Open to children</option>
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Photos</label>
-              {profileId ? (
-                <PhotoManager profileId={profileId} />
-              ) : (
-                <p className="text-sm text-gray-500">Please complete the previous steps first</p>
-              )}
-            </div>
+            {profileId && (
+              <PhotoManager profileId={profileId} />
+            )}
           </div>
         );
 
