@@ -79,7 +79,15 @@ export default function CreateProfilePage() {
         // Make sure enum values are valid
         const childrenValue = formData.children ? 
           (formData.children as 'have' | 'want' | 'don\'t want' | 'open to it') : 
-          'open to it'; // Default value if empty
+          ('open to it' as 'have' | 'want' | 'don\'t want' | 'open to it');
+        
+        const drinkingValue = formData.drinking ? 
+          (formData.drinking as 'never' | 'rarely' | 'socially' | 'regularly') : 
+          ('never' as 'never' | 'rarely' | 'socially' | 'regularly');
+        
+        const smokingValue = formData.smoking ? 
+          (formData.smoking as 'never' | 'socially' | 'regularly') : 
+          ('never' as 'never' | 'socially' | 'regularly');
 
         // Create profile before showing photo upload step
         const profile = await createProfile({
@@ -93,8 +101,8 @@ export default function CreateProfilePage() {
           location_city: formData.locationCity,
           location_country: formData.locationCountry,
           relationship_goals: formData.relationshipGoals as 'long-term' | 'casual-dating' | 'friendship' | 'not-sure-yet',
-          drinking: formData.drinking || 'never', // Default if empty
-          smoking: formData.smoking || 'never', // Default if empty
+          drinking: drinkingValue,
+          smoking: smokingValue,
           children: childrenValue,
         });
 
