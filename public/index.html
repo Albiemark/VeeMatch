@@ -42,23 +42,62 @@
     .btn:hover {
       background-color: #e91e63;
     }
+    .loader {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 64, 129, 0.2);
+      border-radius: 50%;
+      border-top-color: #ff4081;
+      animation: spin 1s ease-in-out infinite;
+      margin-bottom: 1rem;
+    }
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
   </style>
+  <!-- Preload important assets -->
+  <link rel="preload" href="/login" as="document">
+  <link rel="preload" href="/globals.css" as="style">
+  <link rel="preload" href="/_next/static/chunks/main-app.js" as="script">
 </head>
 <body>
   <div class="container">
     <h1>VeeMatch</h1>
     <p>Find your perfect match</p>
-    <div>
+    <div class="loader"></div>
+    <p id="loadingText">Loading application...</p>
+    <div id="buttons" style="display: none;">
       <a href="/login" class="btn">Sign In</a>
       <a href="/sign-up" class="btn">Sign Up</a>
     </div>
   </div>
   
   <script>
-    // Redirect to the app after loading this fallback page
-    setTimeout(function() {
-      window.location.href = '/login';
-    }, 1500);
+    // First try loading the Next.js app normally
+    function loadApp() {
+      // Show loading spinner
+      document.getElementById('loadingText').textContent = 'Loading application...';
+      
+      // Attempt to navigate to the login page
+      const redirectTimer = setTimeout(function() {
+        window.location.href = '/login';
+      }, 1500);
+      
+      // If redirect fails, show manual options after timeout
+      setTimeout(function() {
+        if (document.location.pathname === '/') {
+          clearTimeout(redirectTimer);
+          document.getElementById('loadingText').textContent = 'Please choose an option:';
+          document.getElementById('buttons').style.display = 'block';
+        }
+      }, 3000);
+    }
+    
+    // Run the loader on page load
+    window.addEventListener('DOMContentLoaded', loadApp);
   </script>
 </body>
 </html>
