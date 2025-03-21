@@ -1,37 +1,32 @@
 {
   "node": {
-    "7f5bb802a50a2751eeb0a55f3550441c81570a963d": {
+    "7fa2e164c26a90c04b86316926ecffa03d7accf6d1": {
       "workers": {
+        "app/create-profile/page": {
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Calbie%5C%5CDocuments%5C%5CGitHub%5C%5CVeeMatch%5C%5Cnode_modules%5C%5C%40clerk%5C%5Cnextjs%5C%5Cdist%5C%5Cesm%5C%5Capp-router%5C%5Cserver-actions.js%22%2C%5B%7B%22id%22%3A%227fa2e164c26a90c04b86316926ecffa03d7accf6d1%22%2C%22exportedName%22%3A%22invalidateCacheAction%22%7D%5D%5D%5D&__client_imported__=true!",
+          "async": false
+        },
         "app/page": {
-          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Calbie%5C%5CDocuments%5C%5CGitHub%5C%5CVeeMatch%5C%5Cnode_modules%5C%5C%40clerk%5C%5Cnextjs%5C%5Cdist%5C%5Cesm%5C%5Capp-router%5C%5Cserver-actions.js%22%2C%5B%7B%22id%22%3A%227f5bb802a50a2751eeb0a55f3550441c81570a963d%22%2C%22exportedName%22%3A%22invalidateCacheAction%22%7D%5D%5D%5D&__client_imported__=true!",
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Calbie%5C%5CDocuments%5C%5CGitHub%5C%5CVeeMatch%5C%5Cnode_modules%5C%5C%40clerk%5C%5Cnextjs%5C%5Cdist%5C%5Cesm%5C%5Capp-router%5C%5Cserver-actions.js%22%2C%5B%7B%22id%22%3A%227fa2e164c26a90c04b86316926ecffa03d7accf6d1%22%2C%22exportedName%22%3A%22invalidateCacheAction%22%7D%5D%5D%5D&__client_imported__=true!",
           "async": false
         },
         "app/login/page": {
-          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Calbie%5C%5CDocuments%5C%5CGitHub%5C%5CVeeMatch%5C%5Cnode_modules%5C%5C%40clerk%5C%5Cnextjs%5C%5Cdist%5C%5Cesm%5C%5Capp-router%5C%5Cserver-actions.js%22%2C%5B%7B%22id%22%3A%227f5bb802a50a2751eeb0a55f3550441c81570a963d%22%2C%22exportedName%22%3A%22invalidateCacheAction%22%7D%5D%5D%5D&__client_imported__=true!",
-          "async": false
-        },
-        "app/sign-up/[[...sign_up]]/page": {
-          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Calbie%5C%5CDocuments%5C%5CGitHub%5C%5CVeeMatch%5C%5Cnode_modules%5C%5C%40clerk%5C%5Cnextjs%5C%5Cdist%5C%5Cesm%5C%5Capp-router%5C%5Cserver-actions.js%22%2C%5B%7B%22id%22%3A%227f5bb802a50a2751eeb0a55f3550441c81570a963d%22%2C%22exportedName%22%3A%22invalidateCacheAction%22%7D%5D%5D%5D&__client_imported__=true!",
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Calbie%5C%5CDocuments%5C%5CGitHub%5C%5CVeeMatch%5C%5Cnode_modules%5C%5C%40clerk%5C%5Cnextjs%5C%5Cdist%5C%5Cesm%5C%5Capp-router%5C%5Cserver-actions.js%22%2C%5B%7B%22id%22%3A%227fa2e164c26a90c04b86316926ecffa03d7accf6d1%22%2C%22exportedName%22%3A%22invalidateCacheAction%22%7D%5D%5D%5D&__client_imported__=true!",
           "async": false
         },
         "app/dashboard/page": {
-          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Calbie%5C%5CDocuments%5C%5CGitHub%5C%5CVeeMatch%5C%5Cnode_modules%5C%5C%40clerk%5C%5Cnextjs%5C%5Cdist%5C%5Cesm%5C%5Capp-router%5C%5Cserver-actions.js%22%2C%5B%7B%22id%22%3A%227f5bb802a50a2751eeb0a55f3550441c81570a963d%22%2C%22exportedName%22%3A%22invalidateCacheAction%22%7D%5D%5D%5D&__client_imported__=true!",
-          "async": false
-        },
-        "app/create-profile/page": {
-          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Calbie%5C%5CDocuments%5C%5CGitHub%5C%5CVeeMatch%5C%5Cnode_modules%5C%5C%40clerk%5C%5Cnextjs%5C%5Cdist%5C%5Cesm%5C%5Capp-router%5C%5Cserver-actions.js%22%2C%5B%7B%22id%22%3A%227f5bb802a50a2751eeb0a55f3550441c81570a963d%22%2C%22exportedName%22%3A%22invalidateCacheAction%22%7D%5D%5D%5D&__client_imported__=true!",
+          "moduleId": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5CUsers%5C%5Calbie%5C%5CDocuments%5C%5CGitHub%5C%5CVeeMatch%5C%5Cnode_modules%5C%5C%40clerk%5C%5Cnextjs%5C%5Cdist%5C%5Cesm%5C%5Capp-router%5C%5Cserver-actions.js%22%2C%5B%7B%22id%22%3A%227fa2e164c26a90c04b86316926ecffa03d7accf6d1%22%2C%22exportedName%22%3A%22invalidateCacheAction%22%7D%5D%5D%5D&__client_imported__=true!",
           "async": false
         }
       },
       "layer": {
+        "app/create-profile/page": "action-browser",
         "app/page": "action-browser",
         "app/login/page": "action-browser",
-        "app/sign-up/[[...sign_up]]/page": "action-browser",
-        "app/dashboard/page": "action-browser",
-        "app/create-profile/page": "action-browser"
+        "app/dashboard/page": "action-browser"
       }
     }
   },
   "edge": {},
-  "encryptionKey": "xnP7ZNCyFrHrYkHO5lHRUxgGsFtsm89JVY2kVDBqsXY="
+  "encryptionKey": "Hk27n4IQGSwm69KW2xiTkx9g96dnbS0VXesJnV1+lpg="
 }

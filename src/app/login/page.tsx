@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useSignIn } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Phone, Mail, Apple, ArrowRight, ChevronLeft } from 'lucide-react';
+import { Phone, Mail, Apple, ArrowRight, ChevronLeft, Eye, EyeOff, Loader } from 'lucide-react';
 import SocialLoginButton from '@/components/features/social-login/SocialLoginButton';
 
 // Type guard to verify that signIn has a callable create method.
@@ -20,14 +20,18 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
     // Validate empty fields
     if (!email || !password) {
       setError('Email and password are required');
+      setIsLoading(false);
       return;
     }
 
@@ -36,6 +40,7 @@ const LoginPage = () => {
     const normalizedEmail = email.trim().toLowerCase();
     if (normalizedEmail !== 'dummy@example.com' && !emailRegex.test(normalizedEmail)) {
       setError('Invalid email format');
+      setIsLoading(false);
       return;
     }
 
@@ -50,18 +55,12 @@ const LoginPage = () => {
 
     if (!signIn || !hasCreate(signIn)) {
       setError('Authentication system not available');
-      return;
-    }
-
-    // Use optional chaining to safely retrieve the create function.
-    const safeCreate = signIn?.create;
-    if (!safeCreate) {
-      setError('Authentication system not available');
+      setIsLoading(false);
       return;
     }
 
     try {
-      const result = await safeCreate({
+      const result = await signIn.create({
         identifier: normalizedEmail,
         password: password,
       }) as { status: string; createdSessionId: string };
@@ -82,6 +81,8 @@ const LoginPage = () => {
       } else {
         setError('Sign in failed. Please try again.');
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -89,31 +90,37 @@ const LoginPage = () => {
     router.push('/phone-login');
   };
 
-  // Social login is now handled by SocialLoginButton component
-
   return (
     <div className="bg-gradient-to-b from-pink-100 to-white font-sans flex flex-col items-center min-h-screen">
       {/* App Header */}
       <div className="w-full flex items-center justify-between p-4">
-        <button className="text-gray-600" onClick={() => router.push('/')}>
+        <button 
+          className="text-gray-600 hover:text-gray-800 transition-colors" 
+          onClick={() => router.push('/')}
+          aria-label="Go back"
+        >
           <ChevronLeft size={24} />
         </button>
       </div>
       
       {/* App Logo */}
       <div className="py-8 px-6 text-center">
-        <h1 className="text-4xl font-bold text-pink-500">VeeMatch</h1>
-        <p className="text-gray-500 mt-2">Find your perfect match</p>
+        <h1 className="text-4xl font-bold text-pink-500 mb-2">VeeMatch</h1>
+        <p className="text-gray-500">Find your perfect match</p>
       </div>
 
       <div className="w-full max-w-md px-6">
-        {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-500 text-center rounded-lg">{error}</div>}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-500 text-center rounded-lg animate-fade-in">
+            {error}
+          </div>
+        )}
         
         {/* Login Options */}
         <div className="space-y-4 mb-8">
           <button
             onClick={handlePhoneLogin}
-            className="w-full flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
+            className="w-full flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-pink-200"
           >
             <div className="flex items-center">
               <div className="bg-pink-100 p-2 rounded-full mr-3">
@@ -160,7 +167,7 @@ const LoginPage = () => {
             <div className="w-full border-t border-gray-300"></div>
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-pink-100 text-gray-500">
+            <span className="px-2 bg-gradient-to-b from-pink-100 to-white text-gray-500">
               or login with email
             </span>
           </div>
@@ -175,10 +182,11 @@ const LoginPage = () => {
               </div>
               <input
                 type="email"
-                className="w-full pl-10 p-3 border border-gray-300 rounded-xl focus:ring-pink-500 focus:border-pink-500"
+                className="w-full pl-10 p-3 border border-gray-300 rounded-xl focus:ring-pink-500 focus:border-pink-500 transition-colors"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -186,45 +194,67 @@ const LoginPage = () => {
           <div>
             <div className="flex justify-between mb-1">
               <label className="block text-sm font-medium text-gray-700">Password</label>
-              <a href="#" className="text-sm text-pink-500 hover:text-pink-600">Forgot password?</a>
+              <Link href="/forgot-password" className="text-sm text-pink-500 hover:text-pink-600 transition-colors">
+                Forgot password?
+              </Link>
             </div>
-            <input
-              type="password"
-              className="w-full p-3 border border-gray-300 rounded-xl focus:ring-pink-500 focus:border-pink-500"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                className="w-full p-3 border border-gray-300 rounded-xl focus:ring-pink-500 focus:border-pink-500 transition-colors"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
           
           <button
             type="submit"
-            className="w-full bg-pink-500 text-white p-3 rounded-xl hover:bg-pink-600 transition-colors"
+            disabled={isLoading}
+            className="w-full bg-pink-500 text-white p-3 rounded-xl hover:bg-pink-600 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
           >
-            Log in
+            {isLoading ? (
+              <>
+                <Loader size={20} className="animate-spin mr-2" />
+                Logging in...
+              </>
+            ) : (
+              'Log in'
+            )}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-gray-600">
             Don't have an account?{' '}
-            <Link href="/sign-up" className="text-pink-500 font-semibold hover:text-pink-600">
+            <Link href="/sign-up" className="text-pink-500 font-semibold hover:text-pink-600 transition-colors">
               Sign up
             </Link>
           </p>
         </div>
         
         {/* Dev tools - to be removed in production */}
-        <div className="mt-8 pt-4 border-t border-gray-200 text-center text-xs text-gray-500">
-          <p className="mb-2">Development mode: dummy@example.com / password</p>
-          <button
-            type="button"
-            onClick={() => { setEmail("dummy@example.com"); setPassword("password"); }}
-            className="text-xs p-2 bg-gray-100 rounded hover:bg-gray-200"
-          >
-            Use Dummy Credentials
-          </button>
-        </div>
+        {process.env.NODE_ENV !== 'production' && (
+          <div className="mt-8 pt-4 border-t border-gray-200 text-center text-xs text-gray-500">
+            <p className="mb-2">Development mode: dummy@example.com / password</p>
+            <button
+              type="button"
+              onClick={() => { setEmail("dummy@example.com"); setPassword("password"); }}
+              className="text-xs p-2 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+            >
+              Use Dummy Credentials
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

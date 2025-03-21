@@ -1,7 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
+import { headers } from 'next/headers';
 
-export default function NotFound() {
+export default async function NotFound() {
+  // Properly await headers
+  const headersList = await headers();
+  
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 to-white p-4">
       <div className="text-center">

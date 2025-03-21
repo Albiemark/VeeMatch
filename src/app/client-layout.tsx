@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ProfileProvider } from '@/contexts/ProfileContext';
+import { ClerkProvider } from '@clerk/nextjs';
 
 // Safely handle service worker registration
 if (typeof window !== 'undefined') {
@@ -30,8 +31,10 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ProfileProvider>
-      {children}
-    </ProfileProvider>
+    <ClerkProvider>
+      <ProfileProvider>
+        {children}
+      </ProfileProvider>
+    </ClerkProvider>
   );
 }

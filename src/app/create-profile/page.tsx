@@ -1,731 +1,351 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { useProfile } from '@/contexts/ProfileContext';
-import { ArrowLeft, ArrowRight, Loader, Camera, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import PhotoManager from '@/components/PhotoManager';
+import { toast } from 'sonner';
+import { createProfile, updateProfile } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
-type Step = 
-  | 'basic-info'
-  | 'photos'
-  | 'about'
-  | 'passions'
-  | 'preferences'
-  | 'relationship-goals'
-  | 'confirm';
-
-const CreateProfilePage = () => {
+export default function CreateProfilePage() {
+  const { user } = useUser();
   const router = useRouter();
-  const { user, isSignedIn, isLoaded } = useUser();
-  const { profile, updateProfile, saveProfile, uploadPhoto, deletePhoto, isLoading } = useProfile();
-  
-  const [currentStep, setCurrentStep] = useState<Step>('basic-info');
-  const [stepProgress, setStepProgress] = useState(0);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [dragActive, setDragActive] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [currentStep, setCurrentStep] = useState(1);
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    displayName: '',
+    age: '',
+    gender: '',
+    bio: '',
+    occupation: '',
+    education: '',
+    locationCity: '',
+    locationCountry: '',
+    relationshipGoals: '',
+    drinking: '',
+    smoking: '',
+    children: '',
+  });
 
-  const totalSteps = 7;
-
-  // Show loading state during data loading
-  if (!isLoaded) {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-gradient-to-b from-pink-100 to-white">
-        <Loader size={48} className="text-pink-500 animate-spin" />
-      </div>
-    );
-  }
-
-  // If not signed in, show access denied with a login link
-  if (!isSignedIn) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 to-white">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">Access Denied</h1>
-          <p className="text-gray-600 mb-8">You need to sign in to create your profile</p>
-          <Link 
-            href="/login"
-            className="bg-pink-500 text-white px-6 py-3 rounded-xl hover:bg-pink-600 transition-colors inline-block"
-          >
-            Sign In
-          </Link>
-        </div>
-      </div>
-    );
-  }
-  
-  // If profile is already complete, show the dashboard link
-  if (profile?.profileComplete) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 to-white">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">Profile Complete</h1>
-          <p className="text-gray-600 mb-8">Your profile is already set up!</p>
-          <Link 
-            href="/dashboard"
-            className="bg-pink-500 text-white px-6 py-3 rounded-xl hover:bg-pink-600 transition-colors inline-block"
-          >
-            Go to Dashboard
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  // Calculate progress percentage
+  // Get the profile ID when the component mounts
   useEffect(() => {
-    const stepMapping: Record<Step, number> = {
-      'basic-info': 0,
-      'photos': 1,
-      'about': 2,
-      'passions': 3,
-      'preferences': 4,
-      'relationship-goals': 5,
-      'confirm': 6,
-    };
-    
-    setStepProgress((stepMapping[currentStep] / (totalSteps - 1)) * 100);
-  }, [currentStep]);
+    async function getProfileId() {
+      if (!user) return;
 
-  const handleNext = () => {
-    let nextStep: Step | null = null;
-    
-    switch (currentStep) {
-      case 'basic-info':
-        // Validate basic info
-        if (!profile?.displayName || !profile?.age || !profile?.gender) {
-          setErrorMessage('Please fill out all required fields');
-          return;
-        }
-        nextStep = 'photos';
-        break;
-      
-      case 'photos':
-        // Photos are optional but recommended
-        nextStep = 'about';
-        break;
-      
-      case 'about':
-        // Bio is optional but recommended
-        nextStep = 'passions';
-        break;
-      
-      case 'passions':
-        // Passions are optional
-        nextStep = 'preferences';
-        break;
-      
-      case 'preferences':
-        // Preferences are required
-        if (!profile?.interestedIn || profile.interestedIn.length === 0) {
-          setErrorMessage('Please select who you\'re interested in');
-          return;
-        }
-        nextStep = 'relationship-goals';
-        break;
-      
-      case 'relationship-goals':
-        // Relationship goals are required
-        if (!profile?.relationshipGoals) {
-          setErrorMessage('Please select your relationship goals');
-          return;
-        }
-        nextStep = 'confirm';
-        break;
-      
-      case 'confirm':
-        // Mark profile as complete and save
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (error) throw error;
         if (profile) {
-          updateProfile({ profileComplete: true });
-          saveProfile().then(() => {
-            router.push('/dashboard');
-          });
+          setProfileId(profile.id);
         }
-        break;
+      } catch (error) {
+        console.error('Error getting profile:', error);
+        toast.error('Failed to load profile');
+      }
     }
-    
-    if (nextStep) {
-      setErrorMessage('');
-      setCurrentStep(nextStep);
+
+    getProfileId();
+  }, [user]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleNext = async () => {
+    if (!user) {
+      toast.error('Please sign in to continue');
+      return;
+    }
+
+    try {
+      if (currentStep === 3) {
+        // Create profile before showing photo upload step
+        const profile = await createProfile({
+          user_id: user.id,
+          display_name: formData.displayName,
+          age: parseInt(formData.age),
+          gender: formData.gender as 'male' | 'female' | 'non-binary' | 'other',
+          bio: formData.bio,
+          occupation: formData.occupation,
+          education: formData.education,
+          location_city: formData.locationCity,
+          location_country: formData.locationCountry,
+          relationship_goals: formData.relationshipGoals as 'long-term' | 'casual-dating' | 'friendship' | 'not-sure-yet',
+          drinking: formData.drinking as 'never' | 'rarely' | 'socially' | 'regularly',
+          smoking: formData.smoking as 'never' | 'socially' | 'regularly',
+          children: formData.children as 'have' | 'want' | 'don\'t want' | 'open to it',
+        });
+
+        // Set the profile ID
+        setProfileId(profile.id);
+        
+        // Move to the next step
+        setCurrentStep(prev => prev + 1);
+      } else if (currentStep === 4) {
+        // Update profile completion status
+        await updateProfile(user.id, { profile_complete: true });
+
+        toast.success('Profile created successfully!');
+        router.push('/dashboard');
+      } else {
+        setCurrentStep(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error('Error creating profile:', error);
+      toast.error('Failed to create profile. Please try again.');
     }
   };
 
   const handleBack = () => {
-    let prevStep: Step | null = null;
-    
+    setCurrentStep(prev => prev - 1);
+  };
+
+  const renderStep = () => {
     switch (currentStep) {
-      case 'photos':
-        prevStep = 'basic-info';
-        break;
-      case 'about':
-        prevStep = 'photos';
-        break;
-      case 'passions':
-        prevStep = 'about';
-        break;
-      case 'preferences':
-        prevStep = 'passions';
-        break;
-      case 'relationship-goals':
-        prevStep = 'preferences';
-        break;
-      case 'confirm':
-        prevStep = 'relationship-goals';
-        break;
-    }
-    
-    if (prevStep) {
-      setErrorMessage('');
-      setCurrentStep(prevStep);
-    }
-  };
+      case 1:
+        return (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold">Basic Information</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Display Name</label>
+              <input
+                type="text"
+                name="displayName"
+                value={formData.displayName}
+                onChange={handleInputChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Age</label>
+              <input
+                type="number"
+                name="age"
+                value={formData.age}
+                onChange={handleInputChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Gender</label>
+              <select
+                name="gender"
+                value={formData.gender}
+                onChange={handleInputChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                required
+              >
+                <option value="">Select gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="non-binary">Non-binary</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+        );
 
-  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      const file = files[0];
-      setPhotoFile(file);
-      
-      try {
-        await uploadPhoto(file);
-        setPhotoFile(null);
-      } catch (err) {
-        console.error('Error uploading photo:', err);
-        setErrorMessage('Failed to upload photo. Please try again.');
-      }
+      case 2:
+        return (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold">About You</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Bio</label>
+              <textarea
+                name="bio"
+                value={formData.bio}
+                onChange={handleInputChange}
+                rows={4}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Occupation</label>
+              <input
+                type="text"
+                name="occupation"
+                value={formData.occupation}
+                onChange={handleInputChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Education</label>
+              <input
+                type="text"
+                name="education"
+                value={formData.education}
+                onChange={handleInputChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                required
+              />
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold">Location & Preferences</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">City</label>
+              <input
+                type="text"
+                name="locationCity"
+                value={formData.locationCity}
+                onChange={handleInputChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Country</label>
+              <input
+                type="text"
+                name="locationCountry"
+                value={formData.locationCountry}
+                onChange={handleInputChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Relationship Goals</label>
+              <select
+                name="relationshipGoals"
+                value={formData.relationshipGoals}
+                onChange={handleInputChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                required
+              >
+                <option value="">Select relationship goals</option>
+                <option value="long-term">Long-term relationship</option>
+                <option value="casual-dating">Casual dating</option>
+                <option value="friendship">Friendship</option>
+                <option value="not-sure-yet">Not sure yet</option>
+              </select>
+            </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Lifestyle & Photos</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Drinking</label>
+              <select
+                name="drinking"
+                value={formData.drinking}
+                onChange={handleInputChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                required
+              >
+                <option value="">Select drinking preference</option>
+                <option value="never">Never</option>
+                <option value="rarely">Rarely</option>
+                <option value="socially">Socially</option>
+                <option value="regularly">Regularly</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Smoking</label>
+              <select
+                name="smoking"
+                value={formData.smoking}
+                onChange={handleInputChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                required
+              >
+                <option value="">Select smoking preference</option>
+                <option value="never">Never</option>
+                <option value="socially">Socially</option>
+                <option value="regularly">Regularly</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Children</label>
+              <select
+                name="children"
+                value={formData.children}
+                onChange={handleInputChange}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                required
+              >
+                <option value="">Select children preference</option>
+                <option value="have">Have children</option>
+                <option value="want">Want children</option>
+                <option value="don't want">Don't want children</option>
+                <option value="open to it">Open to it</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Photos</label>
+              {profileId ? (
+                <PhotoManager profileId={profileId} />
+              ) : (
+                <p className="text-sm text-gray-500">Please complete the previous steps first</p>
+              )}
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
     }
   };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(true);
-  };
-  
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-  };
-  
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      setPhotoFile(file);
-      
-      try {
-        await uploadPhoto(file);
-        setPhotoFile(null);
-      } catch (err) {
-        console.error('Error uploading photo:', err);
-        setErrorMessage('Failed to upload photo. Please try again.');
-      }
-    }
-  };
-
-  // Loading state
-  if (isLoading || !isLoaded || !profile) {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-gradient-to-b from-pink-100 to-white">
-        <Loader size={48} className="text-pink-500 animate-spin" />
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pink-100 to-white">
-      {/* Header */}
-      <div className="p-4 flex items-center justify-between">
-        <button 
-          onClick={handleBack}
-          disabled={currentStep === 'basic-info'}
-          className="p-2 text-gray-700 disabled:text-gray-300"
-        >
-          <ArrowLeft size={24} />
-        </button>
-        <div className="text-center">
-          <h1 className="text-xl font-semibold text-gray-800">Create Profile</h1>
-          <div className="w-full bg-gray-200 h-1 mt-2 rounded-full">
-            <div 
-              className="bg-pink-500 h-1 rounded-full transition-all duration-300 ease-in-out" 
-              style={{ width: `${stepProgress}%` }}
-            ></div>
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="mb-8">
+            <div className="flex justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">Step {currentStep} of 4</span>
+              <span className="text-sm font-medium text-gray-700">{Math.round((currentStep / 4) * 100)}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-pink-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(currentStep / 4) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {renderStep()}
+
+          <div className="mt-8 flex justify-between">
+            {currentStep > 1 && (
+              <button
+                onClick={handleBack}
+                className="px-4 py-2 text-gray-700 hover:text-gray-900"
+              >
+                Back
+              </button>
+            )}
+            <button
+              onClick={handleNext}
+              className="ml-auto px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors"
+            >
+              {currentStep === 4 ? 'Create Profile' : 'Next'}
+            </button>
           </div>
         </div>
-        <div className="w-8"></div> {/* Spacer for alignment */}
-      </div>
-
-      <div className="p-6 max-w-md mx-auto">
-        {/* Error message */}
-        {errorMessage && (
-          <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-500 text-center rounded-lg">
-            {errorMessage}
-          </div>
-        )}
-
-        {/* Step content */}
-        <div className="mb-8">
-          {currentStep === 'basic-info' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">Tell us about yourself</h2>
-              <p className="text-gray-600">This information helps us find better matches for you</p>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Your Name
-                  </label>
-                  <input
-                    type="text"
-                    value={profile.displayName || ''}
-                    onChange={(e) => updateProfile({ displayName: e.target.value })}
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-pink-500 focus:border-pink-500"
-                    placeholder="Your name"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Your Age
-                  </label>
-                  <input
-                    type="number"
-                    min="18"
-                    max="120"
-                    value={profile.age || ''}
-                    onChange={(e) => updateProfile({ age: parseInt(e.target.value) || null })}
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-pink-500 focus:border-pink-500"
-                    placeholder="Your age (18+)"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Gender
-                  </label>
-                  <select
-                    value={profile.gender || ''}
-                    onChange={(e) => updateProfile({ gender: e.target.value })}
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-pink-500 focus:border-pink-500"
-                  >
-                    <option value="" disabled>Select your gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="non-binary">Non-binary</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Location
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      value={profile.location.city || ''}
-                      onChange={(e) => updateProfile({ 
-                        location: { ...profile.location, city: e.target.value } 
-                      })}
-                      className="p-3 border border-gray-300 rounded-xl focus:ring-pink-500 focus:border-pink-500"
-                      placeholder="City"
-                    />
-                    <input
-                      type="text"
-                      value={profile.location.country || ''}
-                      onChange={(e) => updateProfile({ 
-                        location: { ...profile.location, country: e.target.value } 
-                      })}
-                      className="p-3 border border-gray-300 rounded-xl focus:ring-pink-500 focus:border-pink-500"
-                      placeholder="Country"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {currentStep === 'photos' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">Add some photos</h2>
-              <p className="text-gray-600">Profiles with photos get 10x more matches</p>
-              
-              {/* Photo gallery */}
-              <div className="grid grid-cols-3 gap-2">
-                {profile.photos.map((photo, index) => (
-                  <div key={index} className="relative aspect-square">
-                    <img 
-                      src={photo} 
-                      alt={`Profile photo ${index + 1}`} 
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                    <button
-                      onClick={() => deletePhoto(photo)}
-                      className="absolute top-1 right-1 bg-black bg-opacity-50 rounded-full p-1 text-white"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                ))}
-                
-                {/* Upload button */}
-                <div 
-                  className={`aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer
-                    ${dragActive ? 'border-pink-500 bg-pink-50' : 'border-gray-300 hover:border-pink-400'}`}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                >
-                  <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
-                    <Camera size={24} className="text-gray-400 mb-2" />
-                    <span className="text-xs text-gray-500">Upload</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handlePhotoUpload}
-                    />
-                  </label>
-                </div>
-              </div>
-              
-              <p className="text-sm text-gray-500">
-                Drag and drop photos or click to upload. Maximum 9 photos.
-              </p>
-            </div>
-          )}
-
-          {currentStep === 'about' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">About you</h2>
-              <p className="text-gray-600">Tell potential matches more about yourself</p>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bio
-                </label>
-                <textarea
-                  value={profile.bio || ''}
-                  onChange={(e) => updateProfile({ bio: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-pink-500 focus:border-pink-500 min-h-[120px]"
-                  placeholder="Share something interesting about yourself..."
-                  maxLength={500}
-                />
-                <p className="text-xs text-right text-gray-500 mt-1">
-                  {profile.bio ? 500 - profile.bio.length : 500} characters remaining
-                </p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Occupation
-                </label>
-                <input
-                  type="text"
-                  value={profile.occupation || ''}
-                  onChange={(e) => updateProfile({ occupation: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-pink-500 focus:border-pink-500"
-                  placeholder="What do you do?"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Education
-                </label>
-                <input
-                  type="text"
-                  value={profile.education || ''}
-                  onChange={(e) => updateProfile({ education: e.target.value })}
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-pink-500 focus:border-pink-500"
-                  placeholder="Your education"
-                />
-              </div>
-            </div>
-          )}
-
-          {currentStep === 'passions' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">Your Passions</h2>
-              <p className="text-gray-600">Select things you love to talk about and do</p>
-              
-              <div className="flex flex-wrap gap-2">
-                {['Travel', 'Fitness', 'Music', 'Food', 'Art', 'Reading', 'Movies', 'Photography', 
-                  'Dancing', 'Cooking', 'Hiking', 'Gaming', 'Technology', 'Fashion', 'Sports', 
-                  'Yoga', 'Writing', 'Animals', 'Nature', 'Politics'].map((passion) => (
-                  <button
-                    key={passion}
-                    onClick={() => {
-                      const currentPassions = [...(profile.passions || [])];
-                      const index = currentPassions.indexOf(passion);
-                      
-                      if (index === -1) {
-                        // Add the passion
-                        updateProfile({ passions: [...currentPassions, passion] });
-                      } else {
-                        // Remove the passion
-                        currentPassions.splice(index, 1);
-                        updateProfile({ passions: currentPassions });
-                      }
-                    }}
-                    className={`py-2 px-4 rounded-full text-sm font-medium transition-colors
-                      ${profile.passions?.includes(passion) 
-                        ? 'bg-pink-500 text-white' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                  >
-                    {passion}
-                  </button>
-                ))}
-              </div>
-              
-              <p className="text-sm text-gray-500">
-                Choose at least 3 passions to help us find better matches (selected: {profile.passions?.length || 0})
-              </p>
-            </div>
-          )}
-
-          {currentStep === 'preferences' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">Your Preferences</h2>
-              <p className="text-gray-600">Let us know who you'd like to meet</p>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  I'm interested in
-                </label>
-                <div className="space-y-2">
-                  {['male', 'female', 'non-binary', 'everyone'].map((gender) => (
-                    <label key={gender} className="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
-                      <input
-                        type={gender === 'everyone' ? 'radio' : 'checkbox'}
-                        checked={
-                          gender === 'everyone' 
-                            ? profile.interestedIn?.length === 3 
-                            : profile.interestedIn?.includes(gender)
-                        }
-                        onChange={() => {
-                          if (gender === 'everyone') {
-                            updateProfile({ interestedIn: ['male', 'female', 'non-binary'] });
-                          } else {
-                            const currentInterests = [...(profile.interestedIn || [])];
-                            const index = currentInterests.indexOf(gender);
-                            
-                            if (index === -1) {
-                              updateProfile({ interestedIn: [...currentInterests, gender] });
-                            } else {
-                              currentInterests.splice(index, 1);
-                              updateProfile({ interestedIn: currentInterests });
-                            }
-                          }
-                        }}
-                        className="mr-3"
-                      />
-                      <span className="capitalize">{gender === 'everyone' ? 'Everyone' : gender}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Additional preferences
-                </label>
-                <div className="space-y-4">
-                  <div>
-                    <label className="flex justify-between mb-1">
-                      <span className="text-sm text-gray-600">Drinking</span>
-                    </label>
-                    <select
-                      value={profile.drinking || ''}
-                      onChange={(e) => updateProfile({ drinking: e.target.value as any })}
-                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-pink-500 focus:border-pink-500"
-                    >
-                      <option value="">Prefer not to say</option>
-                      <option value="never">Never</option>
-                      <option value="rarely">Rarely</option>
-                      <option value="socially">Socially</option>
-                      <option value="regularly">Regularly</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="flex justify-between mb-1">
-                      <span className="text-sm text-gray-600">Smoking</span>
-                    </label>
-                    <select
-                      value={profile.smoking || ''}
-                      onChange={(e) => updateProfile({ smoking: e.target.value as any })}
-                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-pink-500 focus:border-pink-500"
-                    >
-                      <option value="">Prefer not to say</option>
-                      <option value="never">Never</option>
-                      <option value="socially">Socially</option>
-                      <option value="regularly">Regularly</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {currentStep === 'relationship-goals' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">Relationship Goals</h2>
-              <p className="text-gray-600">What are you looking for on VeeMatch?</p>
-              
-              <div className="space-y-2">
-                {['long-term', 'casual-dating', 'friendship', 'not-sure-yet'].map((goal) => {
-                  let label, description;
-                  
-                  switch (goal) {
-                    case 'long-term':
-                      label = 'Long-term relationship';
-                      description = 'Looking for something serious';
-                      break;
-                    case 'casual-dating':
-                      label = 'Casual dating';
-                      description = 'Taking things slow and seeing where they go';
-                      break;
-                    case 'friendship':
-                      label = 'New friends';
-                      description = 'Here to meet new people and expand social circle';
-                      break;
-                    case 'not-sure-yet':
-                      label = 'Not sure yet';
-                      description = 'Still figuring out what I want';
-                      break;
-                    default:
-                      label = goal;
-                      description = '';
-                  }
-                  
-                  return (
-                    <label key={goal} className="flex items-center p-4 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer">
-                      <input
-                        type="radio"
-                        checked={profile.relationshipGoals === goal}
-                        onChange={() => updateProfile({ relationshipGoals: goal })}
-                        className="mr-3"
-                      />
-                      <div>
-                        <p className="font-medium">{label}</p>
-                        <p className="text-sm text-gray-500">{description}</p>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Children
-                </label>
-                <select
-                  value={profile.children || ''}
-                  onChange={(e) => updateProfile({ children: e.target.value as any })}
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-pink-500 focus:border-pink-500"
-                >
-                  <option value="">Prefer not to say</option>
-                  <option value="have">Have children</option>
-                  <option value="want">Want children</option>
-                  <option value="don't want">Don't want children</option>
-                  <option value="open to it">Open to children</option>
-                </select>
-              </div>
-            </div>
-          )}
-
-          {currentStep === 'confirm' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-900">Ready to start matching!</h2>
-              <p className="text-gray-600">Review your profile before finishing</p>
-              
-              <div className="space-y-4">
-                <div className="bg-white p-4 rounded-lg shadow-sm">
-                  <h3 className="font-semibold text-lg">{profile.displayName}, {profile.age}</h3>
-                  <p className="text-gray-500 text-sm">{profile.gender} • {profile.location.city}, {profile.location.country}</p>
-                  
-                  {profile.relationshipGoals && (
-                    <div className="mt-2">
-                      <span className="text-sm bg-pink-100 text-pink-800 px-2 py-1 rounded-full">
-                        Looking for: {profile.relationshipGoals.split('-').join(' ')}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {profile.bio && (
-                    <div className="mt-3">
-                      <p className="text-gray-700 text-sm">{profile.bio}</p>
-                    </div>
-                  )}
-                </div>
-                
-                {profile.photos.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2">
-                    {profile.photos.slice(0, 3).map((photo, index) => (
-                      <div key={index} className="aspect-square">
-                        <img 
-                          src={photo} 
-                          alt={`Profile photo ${index + 1}`} 
-                          className="w-full h-full object-cover rounded-lg"
-                        />
-                      </div>
-                    ))}
-                    {profile.photos.length > 3 && (
-                      <div className="col-span-3 text-center text-sm text-gray-500 mt-1">
-                        +{profile.photos.length - 3} more photos
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {profile.passions && profile.passions.length > 0 && (
-                  <div className="mt-3">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Passions</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {profile.passions.map((passion) => (
-                        <span key={passion} className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
-                          {passion}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                <div className="text-center mt-6">
-                  <p className="text-sm text-gray-600 mb-2">
-                    You can always edit your profile later from your settings.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Bottom button */}
-        <button
-          onClick={handleNext}
-          disabled={isLoading}
-          className="w-full bg-pink-500 text-white p-4 rounded-xl hover:bg-pink-600 transition-colors flex items-center justify-center"
-        >
-          {isLoading ? (
-            <Loader size={24} className="animate-spin" />
-          ) : (
-            <>
-              {currentStep === 'confirm' ? 'Finish & Start Matching' : 'Continue'}
-              {currentStep !== 'confirm' && <ArrowRight size={18} className="ml-2" />}
-            </>
-          )}
-        </button>
       </div>
     </div>
   );
-};
-
-export default CreateProfilePage;
+}

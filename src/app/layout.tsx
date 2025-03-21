@@ -1,12 +1,15 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
-import { metadata } from './layout.metadata';
-import ClientLayout from './client-layout';
+import { ProfileProvider } from '@/contexts/ProfileContext';
+import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ['latin'] });
 
-export { metadata };
+export const metadata = {
+  title: 'VeeMatch - Find Your Perfect Match',
+  description: 'A modern dating app that helps you find meaningful connections.',
+};
 
 export default function RootLayout({
   children,
@@ -15,16 +18,14 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider>
-      <html lang="en">
-        <head>
-          <meta name="theme-color" content="#FF7F50" />
-        </head>
-        <body className={inter.className}>
-          <ClientLayout>
+      <ProfileProvider>
+        <html lang="en" className={inter.className}>
+          <body>
+            <Toaster position="top-center" richColors />
             {children}
-          </ClientLayout>
-        </body>
-      </html>
+          </body>
+        </html>
+      </ProfileProvider>
     </ClerkProvider>
   );
 }

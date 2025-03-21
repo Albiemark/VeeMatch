@@ -29,10 +29,28 @@ const DashboardPage = () => {
           <h1 className="text-2xl font-bold text-gray-800 mb-4">Access Denied</h1>
           <p className="text-gray-600 mb-8">You need to sign in to access this page</p>
           <Link 
-            href="/login"
+            href="/sign-in"
             className="bg-pink-500 text-white px-6 py-3 rounded-xl hover:bg-pink-600 transition-colors inline-block"
           >
-            Go to Login
+            Go to Sign In
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // If no profile exists yet, show create profile message
+  if (!profile) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 to-white">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Create Your Profile</h1>
+          <p className="text-gray-600 mb-8">Get started by creating your profile</p>
+          <Link 
+            href="/create-profile"
+            className="bg-pink-500 text-white px-6 py-3 rounded-xl hover:bg-pink-600 transition-colors inline-block"
+          >
+            Create Profile
           </Link>
         </div>
       </div>
@@ -40,7 +58,7 @@ const DashboardPage = () => {
   }
 
   // If profile is not complete, show a message with a link
-  if (profile && !profile.profileComplete) {
+  if (!profile.profileComplete) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 to-white">
         <div className="text-center">
@@ -64,7 +82,7 @@ const DashboardPage = () => {
         
         <div className="bg-white p-6 rounded-xl shadow-md">
           <div className="flex items-center space-x-4 mb-6">
-            {profile?.photos && profile.photos.length > 0 ? (
+            {profile.photos && profile.photos.length > 0 ? (
               <img 
                 src={profile.photos[0]} 
                 alt={profile.displayName} 
@@ -72,15 +90,15 @@ const DashboardPage = () => {
               />
             ) : (
               <div className="w-16 h-16 rounded-full bg-pink-200 flex items-center justify-center text-pink-500 text-lg font-bold">
-                {profile?.displayName?.charAt(0) || user?.firstName?.charAt(0) || '?'}
+                {profile.displayName?.charAt(0) || user?.firstName?.charAt(0) || '?'}
               </div>
             )}
             <div>
               <h2 className="text-xl font-bold text-gray-800">
-                {profile?.displayName || user?.firstName || 'User'}
+                {profile.displayName || user?.firstName || 'User'}
               </h2>
               <p className="text-gray-500">
-                {profile?.location?.city ? `${profile.location.city}, ${profile.location.country}` : 'No location set'}
+                {profile.location?.city ? `${profile.location.city}, ${profile.location.country}` : 'No location set'}
               </p>
             </div>
           </div>
@@ -101,11 +119,11 @@ const DashboardPage = () => {
               <div className="w-full bg-gray-200 h-2 rounded-full mt-2">
                 <div 
                   className="bg-purple-500 h-2 rounded-full" 
-                  style={{ width: profile?.photos?.length ? '100%' : '80%' }}
+                  style={{ width: profile.photos?.length ? '100%' : '80%' }}
                 ></div>
               </div>
               <p className="text-gray-600 text-sm mt-2">
-                {profile?.photos?.length 
+                {profile.photos?.length 
                   ? 'Your profile is complete!' 
                   : 'Add photos to improve your matches'}
               </p>
