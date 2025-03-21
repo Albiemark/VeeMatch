@@ -1,59 +1,41 @@
-const CACHE_NAME = 'vee-match-cache-v1';
-const urlsToCache = [
-  '/',
-  '/globals.css',
-  '/manifest.json',
-  '/android-chrome-192x192.png',
-  '/android-chrome-512x512.png',
-];
+/**
+ * VeeMatch Service Worker
+ * Minimal version for production use
+ */
 
-self.addEventListener('install', function(event) {
-  // Perform install steps
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(function(cache) {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
-  );
+// Simple no-op service worker that takes immediate control
+self.addEventListener('install', () => {
+  // Skip waiting to activate immediately
+  self.skipWaiting();
 });
 
-self.addEventListener('fetch', function(event) {
+self.addEventListener('activate', event => {
+  // Claim clients to take control immediately
+  event.waitUntil(self.clients.claim());
+});
+
+// Minimal fetch handler that doesn't cache but provides offline support
+self.addEventListener('fetch', event => {
+  // Don't try to handle non-GET requests or those going to dynamic routes
+  if (
+    event.request.method !== 'GET' ||
+    event.request.url.includes('/api/') ||
+    event.request.url.includes('/sign-') ||
+    event.request.url.includes('/dashboard')
+  ) {
+    return;
+  }
+
+  // For GET requests to static resources, try network first then fallback to cache
   event.respondWith(
-    caches.match(event.request)
-      .then(function(response) {
-        // Cache hit - return response
-        if (response) {
-          return response;
+    fetch(event.request)
+      .catch(() => {
+        // Return the offline page for navigation requests
+        if (event.request.mode === 'navigate') {
+          return caches.match('/index.html');
         }
-
-        // IMPORTANT: Clone the request. A request is a stream and
-        // can only be consumed once. Since we are consuming this
-        // once by cache and once by the browser for fetch, we need
-        // to clone the response.
-        var fetchRequest = event.request.clone();
-
-        return fetch(fetchRequest).then(
-          function(response) {
-            // Check if we received a valid response
-            if(!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // IMPORTANT: Clone the response. A response is a stream
-            // and because we want the browser to consume the response
-            // as well as the cache consuming the response, we need
-            // to clone it so we have two streams.
-            var responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
-              .then(function(cache) {
-                cache.put(event.request, responseToCache);
-              });
-
-            return response;
-          }
-        );
+        // Otherwise just try to match the request in the cache
+        return caches.match(event.request);
       })
-    );
+  );
 });

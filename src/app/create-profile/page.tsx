@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useUser } from '@clerk/nextjs';
 import { useProfile } from '@/contexts/ProfileContext';
 import { ArrowLeft, ArrowRight, Loader, Camera, X } from 'lucide-react';
@@ -28,33 +29,47 @@ const CreateProfilePage = () => {
 
   const totalSteps = 7;
 
-  const [authChecked, setAuthChecked] = useState(false);
-  
-  useEffect(() => {
-    // Only run this effect after Clerk has loaded
-    if (!isLoaded) return;
-
-    // If user is not signed in, redirect to login
-    if (!isSignedIn) {
-      router.push('/login');
-      return;
-    }
-    
-    // If profile is already complete, redirect to dashboard
-    if (profile?.profileComplete) {
-      router.push('/dashboard');
-      return;
-    }
-    
-    // If we reach here, authentication is complete and valid
-    setAuthChecked(true);
-  }, [isLoaded, isSignedIn, profile, router]);
-  
-  // Show loading state during auth checks or if not signed in
-  if (!authChecked || !isLoaded || !isSignedIn) {
+  // Show loading state during data loading
+  if (!isLoaded) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-b from-pink-100 to-white">
         <Loader size={48} className="text-pink-500 animate-spin" />
+      </div>
+    );
+  }
+
+  // If not signed in, show access denied with a login link
+  if (!isSignedIn) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 to-white">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Access Denied</h1>
+          <p className="text-gray-600 mb-8">You need to sign in to create your profile</p>
+          <Link 
+            href="/login"
+            className="bg-pink-500 text-white px-6 py-3 rounded-xl hover:bg-pink-600 transition-colors inline-block"
+          >
+            Sign In
+          </Link>
+        </div>
+      </div>
+    );
+  }
+  
+  // If profile is already complete, show the dashboard link
+  if (profile?.profileComplete) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 to-white">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Profile Complete</h1>
+          <p className="text-gray-600 mb-8">Your profile is already set up!</p>
+          <Link 
+            href="/dashboard"
+            className="bg-pink-500 text-white px-6 py-3 rounded-xl hover:bg-pink-600 transition-colors inline-block"
+          >
+            Go to Dashboard
+          </Link>
+        </div>
       </div>
     );
   }

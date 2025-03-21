@@ -1,43 +1,19 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useUser } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useProfile } from '@/contexts/ProfileContext';
 import { Loader } from 'lucide-react';
 
+// Use a simpler approach for the dashboard
+// Instead of complex useEffect redirects, render based on current state
 const DashboardPage = () => {
   const { isSignedIn, user, isLoaded: isUserLoaded } = useUser();
   const { profile, isLoading: isProfileLoading } = useProfile();
-  const router = useRouter();
-  const [authChecked, setAuthChecked] = useState(false);
 
-  // Handle authentication and profile checks
-  useEffect(() => {
-    // Only run this effect after Clerk has loaded
-    if (!isUserLoaded) return;
-
-    // If user is not signed in, redirect to login
-    if (!isSignedIn) {
-      router.push('/login');
-      return;
-    }
-
-    // If user is signed in but profile data is still loading, wait
-    if (isProfileLoading) return;
-
-    // If profile is loaded but not complete, redirect to profile creation
-    if (profile && !profile.profileComplete) {
-      router.push('/create-profile');
-      return;
-    }
-
-    // If we reach here, authentication is complete and valid
-    setAuthChecked(true);
-  }, [isSignedIn, isUserLoaded, isProfileLoading, profile, router]);
-
-  // Show loading state during auth checks
-  if (!authChecked || isProfileLoading || !isUserLoaded) {
+  // Show loading state during data loading
+  if (isProfileLoading || !isUserLoaded) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gradient-to-b from-pink-100 to-white">
         <Loader size={48} className="text-pink-500 animate-spin" />
@@ -45,19 +21,37 @@ const DashboardPage = () => {
     );
   }
 
-  // If somehow they got here without being signed in, show message
+  // If not signed in, show access denied
   if (!isSignedIn) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 to-white">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-800 mb-4">Access Denied</h1>
           <p className="text-gray-600 mb-8">You need to sign in to access this page</p>
-          <button 
-            onClick={() => router.push('/login')}
-            className="bg-pink-500 text-white px-6 py-3 rounded-xl hover:bg-pink-600 transition-colors"
+          <Link 
+            href="/login"
+            className="bg-pink-500 text-white px-6 py-3 rounded-xl hover:bg-pink-600 transition-colors inline-block"
           >
             Go to Login
-          </button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // If profile is not complete, show a message with a link
+  if (profile && !profile.profileComplete) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-pink-100 to-white">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Complete Your Profile</h1>
+          <p className="text-gray-600 mb-8">Please complete your profile to continue</p>
+          <Link 
+            href="/create-profile"
+            className="bg-pink-500 text-white px-6 py-3 rounded-xl hover:bg-pink-600 transition-colors inline-block"
+          >
+            Complete Profile
+          </Link>
         </div>
       </div>
     );
