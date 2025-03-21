@@ -28,17 +28,36 @@ const CreateProfilePage = () => {
 
   const totalSteps = 7;
 
+  const [authChecked, setAuthChecked] = useState(false);
+  
   useEffect(() => {
+    // Only run this effect after Clerk has loaded
+    if (!isLoaded) return;
+
     // If user is not signed in, redirect to login
-    if (isLoaded && !isSignedIn) {
+    if (!isSignedIn) {
       router.push('/login');
+      return;
     }
     
     // If profile is already complete, redirect to dashboard
     if (profile?.profileComplete) {
       router.push('/dashboard');
+      return;
     }
+    
+    // If we reach here, authentication is complete and valid
+    setAuthChecked(true);
   }, [isLoaded, isSignedIn, profile, router]);
+  
+  // Show loading state during auth checks or if not signed in
+  if (!authChecked || !isLoaded || !isSignedIn) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-gradient-to-b from-pink-100 to-white">
+        <Loader size={48} className="text-pink-500 animate-spin" />
+      </div>
+    );
+  }
 
   // Calculate progress percentage
   useEffect(() => {
