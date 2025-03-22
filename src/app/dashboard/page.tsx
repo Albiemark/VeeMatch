@@ -122,7 +122,11 @@ export default function DashboardPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{profile.display_name}</h1>
-              <p className="text-gray-600">{profile.location}</p>
+              <p className="text-gray-600">
+                {profile.location_city && profile.location_country 
+                  ? `${profile.location_city}, ${profile.location_country}` 
+                  : profile.location_city || profile.location_country || ''}
+              </p>
             </div>
           </div>
 
@@ -135,14 +139,21 @@ export default function DashboardPage() {
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-2">Lifestyle</h2>
               <div className="flex flex-wrap gap-2">
-                {profile.lifestyle?.map((item, index) => (
-                  <span
-                    key={index}
-                    className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm"
-                  >
-                    {item}
+                {profile.drinking && (
+                  <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm">
+                    Drinking: {profile.drinking}
                   </span>
-                ))}
+                )}
+                {profile.smoking && (
+                  <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm">
+                    Smoking: {profile.smoking}
+                  </span>
+                )}
+                {profile.children && (
+                  <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-sm">
+                    Children: {profile.children}
+                  </span>
+                )}
               </div>
             </div>
           </div>

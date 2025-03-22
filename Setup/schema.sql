@@ -14,7 +14,7 @@ CREATE TYPE message_status_type AS ENUM ('sent', 'delivered', 'read');
 -- Profiles table
 CREATE TABLE profiles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL UNIQUE,
     display_name TEXT NOT NULL,
     age INTEGER CHECK (age >= 18),
     gender gender_type,
@@ -139,11 +139,15 @@ ALTER TABLE blocked_users ENABLE ROW LEVEL SECURITY;
 -- Profiles policies
 CREATE POLICY "Users can view their own profile"
     ON profiles FOR SELECT
-    USING (auth.uid() = user_id);
+    USING (user_id = current_setting('request.jwt.claims')::json->>'sub');
+
+CREATE POLICY "Users can insert their own profile"
+    ON profiles FOR INSERT
+    WITH CHECK (user_id = current_setting('request.jwt.claims')::json->>'sub');
 
 CREATE POLICY "Users can update their own profile"
     ON profiles FOR UPDATE
-    USING (auth.uid() = user_id);
+    USING (user_id = current_setting('request.jwt.claims')::json->>'sub');
 
 -- Photos policies
 CREATE POLICY "Users can view their own photos"
@@ -173,10 +177,10 @@ CREATE POLICY "Users can delete their own photos"
 -- Matches policies
 CREATE POLICY "Users can view their own matches"
     ON matches FOR SELECT
-    USING (auth.uid() IN (
-        SELECT user_id FROM profiles WHERE id = user1_id
+    USING (EXISTS (
+        SELECT 1 FROM profiles WHERE id = user1_id AND user_id = current_setting('request.jwt.claims')::json->>'sub'
         UNION
-        SELECT user_id FROM profiles WHERE id = user2_id
+        SELECT 1 FROM profiles WHERE id = user2_id AND user_id = current_setting('request.jwt.claims')::json->>'sub'
     ));
 
 -- Messages policies
@@ -186,38 +190,38 @@ CREATE POLICY "Users can view messages in their matches"
         SELECT 1 FROM matches
         WHERE matches.id = messages.match_id
         AND (
-            EXISTS (SELECT 1 FROM profiles WHERE id = matches.user1_id AND user_id = auth.uid())
+            EXISTS (SELECT 1 FROM profiles WHERE id = matches.user1_id AND user_id = current_setting('request.jwt.claims')::json->>'sub')
             OR
-            EXISTS (SELECT 1 FROM profiles WHERE id = matches.user2_id AND user_id = auth.uid())
+            EXISTS (SELECT 1 FROM profiles WHERE id = matches.user2_id AND user_id = current_setting('request.jwt.claims')::json->>'sub')
         )
     ));
 
 -- Notifications policies
 CREATE POLICY "Users can view their own notifications"
     ON notifications FOR SELECT
-    USING (user_id = auth.uid());
+    USING (user_id = current_setting('request.jwt.claims')::json->>'sub');
 
 -- User preferences policies
 CREATE POLICY "Users can view their own preferences"
     ON user_preferences FOR SELECT
-    USING (user_id = auth.uid());
+    USING (user_id = current_setting('request.jwt.claims')::json->>'sub');
 
 CREATE POLICY "Users can update their own preferences"
     ON user_preferences FOR UPDATE
-    USING (user_id = auth.uid());
+    USING (user_id = current_setting('request.jwt.claims')::json->>'sub');
 
 -- Blocked users policies
 CREATE POLICY "Users can view their own blocked users"
     ON blocked_users FOR SELECT
-    USING (blocker_id = auth.uid());
+    USING (blocker_id = current_setting('request.jwt.claims')::json->>'sub');
 
 CREATE POLICY "Users can block other users"
     ON blocked_users FOR INSERT
-    WITH CHECK (blocker_id = auth.uid());
+    WITH CHECK (blocker_id = current_setting('request.jwt.claims')::json->>'sub');
 
 CREATE POLICY "Users can unblock users"
     ON blocked_users FOR DELETE
-    USING (blocker_id = auth.uid());
+    USING (blocker_id = current_setting('request.jwt.claims')::json->>'sub');
 
 -- Create functions for common operations
 CREATE OR REPLACE FUNCTION update_updated_at_column()

@@ -1,6 +1,8 @@
 {
-  "/page": "app/page.js",
-  "/create-profile/page": "app/create-profile/page.js",
-  "/login/page": "app/login/page.js",
-  "/dashboard/page": "app/dashboard/page.js"
+  "/dashboard/page": "app/dashboard/page.js",
+  "/messages/page": "app/messages/page.js",
+  "/api/profile/route": "app/api/profile/route.js",
+  "/discover/page": "app/discover/page.js",
+  "/settings/preferences/page": "app/settings/preferences/page.js",
+  "/login/page": "app/login/page.js"
 }

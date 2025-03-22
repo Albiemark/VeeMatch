@@ -284,9 +284,22 @@ export async function getUserPreferences(profileId: string) {
     .from('user_preferences')
     .select('*')
     .eq('user_id', profileId)
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
+
+  // Return default preferences if none found
+  if (!data) {
+    return {
+      user_id: profileId,
+      min_age: 18,
+      max_age: 99,
+      interested_in: [],
+      max_distance: 100,
+      show_me: true
+    };
+  }
+
   return data;
 }
 
@@ -294,17 +307,47 @@ export async function getUserPreferences(profileId: string) {
 export async function updateUserPreferences(profileId: string, preferences: {
   min_age?: number;
   max_age?: number;
-  interested_in?: ('male' | 'female' | 'non-binary' | 'other')[];
+  interested_in?: string[];
   max_distance?: number;
   show_me?: boolean;
 }) {
+  // Check if preferences already exist
+  const { data: existingPrefs, error: checkError } = await supabase
+    .from('user_preferences')
+    .select('user_id')
+    .eq('user_id', profileId)
+    .maybeSingle();
+
+  if (checkError) throw checkError;
+
+  // If preferences exist, update them
+  if (existingPrefs) {
+    const { data, error } = await supabase
+      .from('user_preferences')
+      .update({
+        ...preferences,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', profileId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Otherwise create new preferences
   const { data, error } = await supabase
     .from('user_preferences')
-    .upsert([
+    .insert([
       {
         user_id: profileId,
-        ...preferences,
-      },
+        min_age: preferences.min_age || 18,
+        max_age: preferences.max_age || 99,
+        interested_in: preferences.interested_in || [],
+        max_distance: preferences.max_distance || 100,
+        show_me: preferences.show_me !== undefined ? preferences.show_me : true
+      }
     ])
     .select()
     .single();
@@ -404,4 +447,219 @@ export async function setPrimaryPhoto(profileId: string, photoId: string) {
     console.error('Error setting primary photo:', error);
     throw error;
   }
+}
+
+// Helper function to get potential matches (discover)
+export async function getDiscoverProfiles(userId: string) {
+  // First we need the current user's profile ID
+  const { data: userProfile, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, gender')
+    .eq('user_id', userId)
+    .single();
+
+  if (profileError) throw profileError;
+  if (!userProfile) throw new Error('User profile not found');
+
+  // Get user preferences if they exist, otherwise use defaults
+  const { data: preferences, error: prefError } = await supabase
+    .from('user_preferences')
+    .select('min_age, max_age, interested_in, max_distance')
+    .eq('user_id', userProfile.id)
+    .maybeSingle();
+
+  // Default preferences if none set
+  const minAge = preferences?.min_age || 18;
+  const maxAge = preferences?.max_age || 99;
+  const interestedIn = preferences?.interested_in || null; // null means any gender
+
+  // Get existing matches and blocks to exclude these users
+  const { data: matchedUsers, error: matchError } = await supabase
+    .from('matches')
+    .select('user1_id, user2_id')
+    .or(`user1_id.eq.${userProfile.id},user2_id.eq.${userProfile.id}`);
+
+  if (matchError) throw matchError;
+
+  // Get blocked users
+  const { data: blockedUsers, error: blockError } = await supabase
+    .from('blocked_users')
+    .select('blocked_id')
+    .eq('blocker_id', userProfile.id);
+
+  if (blockError) throw blockError;
+
+  // Create arrays of users to exclude
+  const excludeIds = new Set<string>();
+  excludeIds.add(userProfile.id); // Exclude self
+
+  // Add matched users to exclusion list
+  if (matchedUsers && matchedUsers.length > 0) {
+    matchedUsers.forEach(match => {
+      if (match.user1_id === userProfile.id) {
+        excludeIds.add(match.user2_id);
+      } else {
+        excludeIds.add(match.user1_id);
+      }
+    });
+  }
+
+  // Add blocked users to exclusion list
+  if (blockedUsers && blockedUsers.length > 0) {
+    blockedUsers.forEach(block => {
+      excludeIds.add(block.blocked_id);
+    });
+  }
+
+  // Convert exclusion set to array
+  const excludeIdsArray = Array.from(excludeIds);
+
+  // Build the query
+  let query = supabase
+    .from('profiles')
+    .select(`
+      *,
+      photos(storage_path, is_primary, order_index),
+      profile_passions(
+        passions(id, name)
+      )
+    `)
+    .eq('profile_complete', true)
+    .not('id', 'in', `(${excludeIdsArray.join(',')})`)
+    .gte('age', minAge)
+    .lte('age', maxAge);
+
+  // Add gender filter if user has preferences
+  if (interestedIn && interestedIn.length > 0) {
+    query = query.in('gender', interestedIn);
+  }
+
+  // Limit the number of profiles to return
+  query = query.limit(20);
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+
+  // Transform the data to match our UserProfile interface
+  return data.map((profile: any) => {
+    // Get the primary photo if available, otherwise the first photo
+    const primaryPhoto = profile.photos?.find((p: any) => p.is_primary);
+    const firstPhoto = profile.photos?.length > 0 ? profile.photos[0] : null;
+    const photoPath = primaryPhoto?.storage_path || firstPhoto?.storage_path;
+    
+    // Get photo URL if there's a path
+    const photoUrl = photoPath 
+      ? supabase.storage.from('photos').getPublicUrl(photoPath).data.publicUrl 
+      : null;
+
+    // Transform passions to a simple array of strings
+    const passions = profile.profile_passions?.map((pp: any) => pp.passions?.name) || [];
+
+    return {
+      id: profile.id,
+      user_id: profile.user_id,
+      display_name: profile.display_name,
+      age: profile.age,
+      gender: profile.gender,
+      bio: profile.bio,
+      occupation: profile.occupation,
+      education: profile.education,
+      location_city: profile.location_city,
+      location_country: profile.location_country,
+      photos: photoUrl ? [photoUrl] : [],
+      relationship_goals: profile.relationship_goals,
+      drinking: profile.drinking,
+      smoking: profile.smoking,
+      children: profile.children,
+      profile_complete: profile.profile_complete,
+      created_at: profile.created_at,
+      updated_at: profile.updated_at,
+      passions,
+    };
+  });
+}
+
+// Helper function to like a profile (create a pending match)
+export async function likeProfile(currentProfileId: string, targetProfileId: string) {
+  // Check if there's already a match where the current user is user2
+  const { data: existingMatch, error: matchError } = await supabase
+    .from('matches')
+    .select('id, status')
+    .eq('user1_id', targetProfileId)
+    .eq('user2_id', currentProfileId)
+    .maybeSingle();
+
+  if (matchError) throw matchError;
+
+  // If there's an existing match (the other user liked us first), update it to matched
+  if (existingMatch) {
+    const { data, error } = await supabase
+      .from('matches')
+      .update({ status: 'matched', updated_at: new Date().toISOString() })
+      .eq('id', existingMatch.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { ...data, isNewMatch: true };
+  }
+
+  // Otherwise create a new pending match
+  const { data, error } = await supabase
+    .from('matches')
+    .insert([
+      {
+        user1_id: currentProfileId,
+        user2_id: targetProfileId,
+        status: 'pending'
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return { ...data, isNewMatch: false };
+}
+
+// Helper function to pass (reject) a profile
+export async function passProfile(currentProfileId: string, targetProfileId: string) {
+  // Check if there's already a match where the current user is user2
+  const { data: existingMatch, error: matchError } = await supabase
+    .from('matches')
+    .select('id')
+    .eq('user1_id', targetProfileId)
+    .eq('user2_id', currentProfileId)
+    .maybeSingle();
+
+  if (matchError) throw matchError;
+
+  // If there's an existing match, update it to rejected
+  if (existingMatch) {
+    const { data, error } = await supabase
+      .from('matches')
+      .update({ status: 'rejected', updated_at: new Date().toISOString() })
+      .eq('id', existingMatch.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Otherwise create a new rejected match
+  const { data, error } = await supabase
+    .from('matches')
+    .insert([
+      {
+        user1_id: currentProfileId,
+        user2_id: targetProfileId,
+        status: 'rejected'
+      }
+    ])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
 } 
