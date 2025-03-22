@@ -76,7 +76,7 @@ const SocialLoginButton = ({
 
   return (
     <button
-      onClick={process.env.NODE_ENV !== 'production' ? handleDemoSignIn : handleSocialSignIn}
+      onClick={handleSocialSignIn}
       disabled={isLoading}
       className="w-full flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow disabled:opacity-70"
     >

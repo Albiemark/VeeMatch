@@ -27,6 +27,7 @@ const LoginForm = () => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+    console.log('Login form submitted', { email });
 
     // Validate empty fields
     if (!email || !password) {
@@ -46,34 +47,52 @@ const LoginForm = () => {
 
     // Bypass Clerk sign-in for dummy credentials
     if (normalizedEmail === 'dummy@example.com') {
+      console.log('Using dummy credentials');
       if (setActive) {
-        await setActive({ session: 'dummy-session' });
+        console.log('Setting active session for dummy user');
+        try {
+          await setActive({ session: 'dummy-session' });
+          console.log('Session set successfully');
+        } catch (error) {
+          console.error('Error setting active session:', error);
+        }
       }
+      console.log('Redirecting to dashboard');
       router.push('/dashboard');
       return;
     }
 
+    console.log('Checking Clerk signIn availability');
     if (!signIn || !hasCreate(signIn)) {
+      console.error('Authentication system not available', { signIn });
       setError('Authentication system not available');
       setIsLoading(false);
       return;
     }
 
     try {
+      console.log('Attempting to sign in with Clerk');
       const result = await signIn.create({
         identifier: normalizedEmail,
         password: password,
       }) as { status: string; createdSessionId: string };
 
+      console.log('Sign in result:', result);
+
       if (result.status === 'complete') {
+        console.log('Sign in complete, setting active session');
         if (setActive) {
           await setActive({ session: result.createdSessionId });
+          console.log('Active session set successfully');
         }
+        console.log('Redirecting to dashboard after successful login');
         router.push('/dashboard');
       } else {
+        console.error('Unexpected sign in status', result.status);
         setError('Unexpected sign in status');
       }
     } catch (err: any) {
+      console.error('Sign in error:', err);
       if (err.errors && Array.isArray(err.errors)) {
         const clerkError = err.errors[0];
         const message = clerkError.longMessage || clerkError.message;
