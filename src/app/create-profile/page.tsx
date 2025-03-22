@@ -143,7 +143,7 @@ export default function CreateProfilePage() {
                 name="displayName"
                 value={formData.displayName}
                 onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white"
                 required
               />
             </div>
@@ -154,7 +154,7 @@ export default function CreateProfilePage() {
                 name="age"
                 value={formData.age}
                 onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white"
                 required
               />
             </div>
@@ -164,7 +164,7 @@ export default function CreateProfilePage() {
                 name="gender"
                 value={formData.gender}
                 onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white"
                 required
               >
                 <option value="">Select gender</option>
@@ -188,7 +188,7 @@ export default function CreateProfilePage() {
                 value={formData.bio}
                 onChange={handleInputChange}
                 rows={4}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white"
                 required
               />
             </div>
@@ -199,7 +199,7 @@ export default function CreateProfilePage() {
                 name="occupation"
                 value={formData.occupation}
                 onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white"
                 required
               />
             </div>
@@ -210,7 +210,7 @@ export default function CreateProfilePage() {
                 name="education"
                 value={formData.education}
                 onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white"
                 required
               />
             </div>
@@ -228,7 +228,7 @@ export default function CreateProfilePage() {
                 name="locationCity"
                 value={formData.locationCity}
                 onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white"
                 required
               />
             </div>
@@ -239,7 +239,7 @@ export default function CreateProfilePage() {
                 name="locationCountry"
                 value={formData.locationCountry}
                 onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white"
                 required
               />
             </div>
@@ -249,7 +249,7 @@ export default function CreateProfilePage() {
                 name="relationshipGoals"
                 value={formData.relationshipGoals}
                 onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white"
                 required
               >
                 <option value="">Select relationship goals</option>
@@ -272,7 +272,7 @@ export default function CreateProfilePage() {
                 name="drinking"
                 value={formData.drinking}
                 onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white"
               >
                 <option value="">Select option</option>
                 <option value="never">Never</option>
@@ -287,7 +287,7 @@ export default function CreateProfilePage() {
                 name="smoking"
                 value={formData.smoking}
                 onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white"
               >
                 <option value="">Select option</option>
                 <option value="never">Never</option>
@@ -301,7 +301,7 @@ export default function CreateProfilePage() {
                 name="children"
                 value={formData.children}
                 onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 bg-white"
               >
                 <option value="">Select option</option>
                 <option value="have">Have children</option>

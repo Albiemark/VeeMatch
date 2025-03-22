@@ -1,4 +1,4 @@
-// File: C:\Users\albie\Documents\GitHub\VeeMatch\src\app\layout.tsx
+// File: /home/mark/Documents/GitHub/VeeMatch/src/app/layout.tsx
 import * as entry from '../../../src/app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

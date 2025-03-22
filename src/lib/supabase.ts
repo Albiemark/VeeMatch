@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
   throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_URL');
@@ -7,21 +7,73 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
   throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_ANON_KEY');
 }
 
+// Create a client with the anonymous key for client-side use
 export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
+// If service role key is available, create an admin client for storage operations
+// This is safe because this lib file is used in API routes or server components
+let serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+let adminClient: SupabaseClient | undefined;
+
+if (serviceRoleKey) {
+  adminClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    serviceRoleKey,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
+  console.log('Admin Supabase client initialized');
+}
+
+// Function to get the appropriate client (admin or regular)
+export function getSupabaseClient(): SupabaseClient {
+  return adminClient || supabase;
+}
+
 // Helper function to get user's profile
 export async function getUserProfile(userId: string) {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
+  console.log('getUserProfile called for userId:', userId);
+  console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+  console.log('Using anon key:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  
+  try {
+    console.log('Making query to profiles table...');
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
 
-  if (error) throw error;
-  return data;
+    console.log('Query completed, error:', !!error, 'data exists:', !!data);
+    
+    if (error) {
+      // Check if it's a "no rows returned" error, which means profile doesn't exist
+      if (error.code === 'PGRST116') {
+        console.log('No profile found for user:', userId);
+        console.log('This is normal for new users - returning null');
+        return null;
+      }
+      
+      console.error('Error in getUserProfile:', error);
+      console.error('Error code:', error.code, 'Error message:', error.message);
+      throw error;
+    }
+    
+    console.log('Profile retrieved successfully:', data?.id);
+    console.log('Profile data keys:', data ? Object.keys(data) : 'null data');
+    return data;
+  } catch (error) {
+    console.error('Exception in getUserProfile:', error);
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack available');
+    throw error;
+  }
 }
 
 // Helper function to create a new profile
@@ -80,65 +132,138 @@ export async function updateProfile(userId: string, updates: {
   return data;
 }
 
+// Helper function to ensure the photos bucket exists
+export async function ensurePhotosBucketExists() {
+  try {
+    const client = getSupabaseClient();
+    console.log('Checking if photos bucket exists...');
+    
+    // Check if bucket exists
+    const { data, error } = await client.storage.getBucket('photos');
+    
+    if (error) {
+      if (error.message.includes('does not exist')) {
+        console.log('Photos bucket does not exist, creating...');
+        // Create the bucket if it doesn't exist
+        const { error: createError } = await client.storage.createBucket('photos', {
+          public: true,
+          fileSizeLimit: 5 * 1024 * 1024, // 5MB limit
+        });
+        
+        if (createError) {
+          console.error('Error creating photos bucket:', createError);
+          throw createError;
+        }
+        
+        // Set bucket policy to public
+        const { error: policyError } = await client.storage.from('photos').createSignedUrl('test.txt', 1);
+        if (policyError && !policyError.message.includes('not found')) {
+          console.error('Error setting bucket policy:', policyError);
+        }
+        
+        console.log('Photos bucket created successfully');
+      } else {
+        console.error('Error checking photos bucket:', error);
+        throw error;
+      }
+    } else {
+      console.log('Photos bucket already exists');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error ensuring photos bucket exists:', error);
+    return false;
+  }
+}
+
 // Helper function to upload a photo
 export async function uploadPhoto(file: File, profileId: string) {
-  // First get the profile to get the user ID
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('user_id')
-    .eq('id', profileId)
-    .single();
+  try {
+    console.log('Starting upload process with supabase...');
+    const client = getSupabaseClient();
+    console.log('Using client with URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+    
+    // Ensure bucket exists
+    await ensurePhotosBucketExists();
 
-  if (profileError) throw profileError;
-  if (!profile) throw new Error('Profile not found');
+    // First get the profile to get the user ID
+    const { data: profile, error: profileError } = await client
+      .from('profiles')
+      .select('user_id')
+      .eq('id', profileId)
+      .single();
 
-  const fileExt = file.name.split('.').pop();
-  // Use the full Clerk user ID for the folder name
-  const fileName = `${profile.user_id}/${Math.random()}.${fileExt}`;
+    if (profileError) {
+      console.error('Profile fetch error:', profileError);
+      throw profileError;
+    }
+    
+    if (!profile) {
+      throw new Error('Profile not found');
+    }
 
-  // Upload the file
-  const { error: uploadError } = await supabase.storage
-    .from('photos')
-    .upload(fileName, file, {
-      cacheControl: '3600',
-      upsert: false
-    });
+    const fileExt = file.name.split('.').pop();
+    const uniqueId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
+    // Use the full Clerk user ID for the folder name
+    const fileName = `${profile.user_id}/${uniqueId}.${fileExt}`;
 
-  if (uploadError) {
-    console.error('Upload error:', uploadError);
-    throw uploadError;
-  }
+    console.log('Uploading file to', fileName);
 
-  const { data: { publicUrl } } = supabase.storage
-    .from('photos')
-    .getPublicUrl(fileName);
+    // Upload the file
+    const { error: uploadError } = await client.storage
+      .from('photos')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: true // Change to true to allow overwriting
+      });
 
-  // Insert the photo record
-  const { data, error } = await supabase
-    .from('photos')
-    .insert([
-      {
-        profile_id: profileId,
-        storage_path: fileName,
-        order_index: 0,
-      },
-    ])
-    .select()
-    .single();
+    if (uploadError) {
+      console.error('Upload error details:', uploadError);
+      throw uploadError;
+    }
 
-  if (error) {
-    console.error('Database error:', error);
+    // Get the public URL
+    const { data: { publicUrl } } = client.storage
+      .from('photos')
+      .getPublicUrl(fileName);
+
+    console.log('File uploaded successfully, public URL:', publicUrl);
+
+    // Insert the photo record
+    const { data, error } = await client
+      .from('photos')
+      .insert([
+        {
+          profile_id: profileId,
+          storage_path: fileName,
+          order_index: 0,
+          is_primary: false, // Default to not primary
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Database insert error:', error);
+      throw error;
+    }
+
+    return { ...data, url: publicUrl };
+  } catch (error) {
+    console.error('Complete upload error:', error);
     throw error;
   }
-
-  return { ...data, url: publicUrl };
 }
 
 // Helper function to get user's photos
 export async function getUserPhotos(profileId: string) {
   if (!profileId) {
+    console.error('getUserPhotos called without profileId');
     throw new Error('Profile ID is required');
   }
+
+  console.log('Getting photos for profile:', profileId);
 
   try {
     const { data, error } = await supabase
@@ -148,27 +273,38 @@ export async function getUserPhotos(profileId: string) {
       .order('order_index');
 
     if (error) {
-      console.error('Supabase error:', error);
+      console.error('Supabase error in getUserPhotos:', error);
       throw error;
     }
 
-    if (!data) {
+    console.log('Raw photos data from database:', data);
+
+    if (!data || data.length === 0) {
+      console.log('No photos found for profile:', profileId);
       return [];
     }
 
     // Add public URLs to each photo
-    return data.map(photo => {
+    const photosWithUrls = data.map(photo => {
       if (!photo.storage_path) {
         console.warn('Photo missing storage_path:', photo);
         return photo;
       }
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('photos')
+        .getPublicUrl(photo.storage_path);
+      
+      console.log(`Generated URL for ${photo.storage_path}:`, publicUrl);
+      
       return {
         ...photo,
-        url: supabase.storage
-          .from('photos')
-          .getPublicUrl(photo.storage_path).data.publicUrl
+        url: publicUrl
       };
     });
+
+    console.log('Returning photos with URLs:', photosWithUrls);
+    return photosWithUrls;
   } catch (error) {
     console.error('Error in getUserPhotos:', error);
     throw error;
@@ -423,24 +559,29 @@ export async function getBlockedUsers(profileId: string) {
   return data;
 }
 
+// Helper function to set a photo as primary
 export async function setPrimaryPhoto(profileId: string, photoId: string) {
   try {
     // First, unset any existing primary photo
     const { error: unsetError } = await supabase
       .from('photos')
-      .update({ is_primary: false })
+      .update({
+        is_primary: false
+      })
       .eq('profile_id', profileId);
 
     if (unsetError) throw unsetError;
 
     // Then set the new primary photo
-    const { error: setError } = await supabase
+    const { error: setPrimaryError } = await supabase
       .from('photos')
-      .update({ is_primary: true })
+      .update({
+        is_primary: true
+      })
       .eq('id', photoId)
       .eq('profile_id', profileId);
 
-    if (setError) throw setError;
+    if (setPrimaryError) throw setPrimaryError;
 
     return { success: true };
   } catch (error) {

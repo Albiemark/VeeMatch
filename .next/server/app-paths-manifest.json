@@ -1,8 +1,4 @@
 {
-  "/dashboard/page": "app/dashboard/page.js",
-  "/messages/page": "app/messages/page.js",
-  "/api/profile/route": "app/api/profile/route.js",
-  "/discover/page": "app/discover/page.js",
-  "/settings/preferences/page": "app/settings/preferences/page.js",
-  "/login/page": "app/login/page.js"
+  "/_not-found/page": "app/_not-found/page.js",
+  "/profile/page": "app/profile/page.js"
 }
